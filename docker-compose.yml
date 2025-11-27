@@ -1,0 +1,22 @@
+services:
+  jmcomic-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: jmcomic-api:latest
+    container_name: jmcomic-api
+    ports:
+      - "8000:8000"
+    environment:
+      JM_OPTION_PATH: ${JM_OPTION_PATH:-/app/assets/option/option_workflow_download.yml}
+      JM_DOWNLOAD_DIR: /app/data
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    networks:
+      - docker_mynetwork
+
+networks:
+  docker_mynetwork:
+    external: true
+    name: docker_docker_mynetwork
