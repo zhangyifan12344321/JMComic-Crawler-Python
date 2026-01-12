@@ -130,9 +130,9 @@ class DirRule:
     @classmethod
     def parse_f_string_rule(cls, album, photo, rule: str):
         properties = {}
-        if album:
+        if album is not None:
             properties.update(album.get_properties_dict())
-        if photo:
+        if photo is not None:
             properties.update(photo.get_properties_dict())
         return rule.format(**properties)
 

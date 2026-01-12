@@ -414,6 +414,22 @@ class JmcomicText:
         path = f'/media/albums/{cls.parse_to_jm_id(album_id)}{size}.jpg'
         return cls.format_url(path, image_domain)
 
+    @classmethod
+    def compare_versions(cls, v1: str, v2: str) -> int:
+        parts1 = list(map(int, v1.split(".")))
+        parts2 = list(map(int, v2.split(".")))
+
+        # 补齐长度
+        length = max(len(parts1), len(parts2))
+        parts1 += [0] * (length - len(parts1))
+        parts2 += [0] * (length - len(parts2))
+
+        if parts1 > parts2:
+            return 1  # v1 大
+        elif parts1 < parts2:
+            return -1  # v2 大
+        else:
+            return 0  # 相等
 
 # 支持dsl: #{???} -> os.getenv(???)
 JmcomicText.dsl_replacer.add_dsl_and_replacer(r'\$\{(.*?)\}', JmcomicText.match_os_env)

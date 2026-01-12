@@ -122,17 +122,23 @@ class JmApiResp(JmJsonResp):
     def encoded_data(self) -> str:
         return self.json()['data']
 
+    def require_have_data(self):
+        data = self.encoded_data
+        if isinstance(data, list) and len(data) == 0 and self.json().get('errorMsg', None):
+            ExceptionTool.raises_resp(f'data返回值异常: {self.text}', self)
+
     @property
     def res_data(self) -> Any:
         self.require_success()
+        self.require_have_data()
         from json import loads
         return loads(self.decoded_data)
 
     @property
     def model_data(self) -> AdvancedDict:
         self.require_success()
+        self.require_have_data()
         return AdvancedDict(self.res_data)
-
 
 # album-comment
 class JmAlbumCommentResp(JmJsonResp):

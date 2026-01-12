@@ -77,7 +77,7 @@ class JmMagicConstants:
     APP_TOKEN_SECRET_2 = '18comicAPPContent'
     APP_DATA_SECRET = '185Hcomic3PAPP7R'
     API_DOMAIN_SERVER_SECRET = 'diosfjckwpqpdfjkvnqQjsik'
-    APP_VERSION = '2.0.6'
+    APP_VERSION = '2.0.13'
 
 
 # 模块级别共用配置
@@ -133,6 +133,8 @@ class JmModuleConfig:
     www.cdnplaystation6.vip
     www.cdnplaystation6.cc
     ''')
+
+    DOMAIN_API_UPDATED_LIST = None
 
     # 获取最新移动端API域名的地址
     API_URL_DOMAIN_SERVER_LIST = shuffled('''
@@ -209,7 +211,6 @@ class JmModuleConfig:
     FLAG_API_CLIENT_REQUIRE_COOKIES = True
     # 自动更新禁漫API域名
     FLAG_API_CLIENT_AUTO_UPDATE_DOMAIN = True
-    FLAG_API_CLIENT_AUTO_UPDATE_DOMAIN_DONE = None
     # log开关标记
     FLAG_ENABLE_JM_LOG = True
     # log时解码url
