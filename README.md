@@ -1,6 +1,14 @@
 <!-- 顶部标题 & 统计徽章 -->
 <div align="center">
   <h1 style="margin-top: 0" align="center">Python API for JMComic</h1>
+
+  <p align="center">
+    <strong>简体中文</strong> •
+    <a href="./assets/readme/README-en.md">English</a> •
+    <a href="./assets/readme/README-jp.md">日本語</a> •
+    <a href="./assets/readme/README-kr.md">한국어</a>
+  </p>
+
   <p align="center">
   <strong>提供 Python API 访问禁漫天堂（网页端 & 移动端），集成 GitHub Actions 下载器🚀</strong>
   </p>
@@ -15,17 +23,17 @@
 </div>
 
 
-
-
 > 本项目封装了一套可用于爬取JM的Python API.
 > 
 > 你可以通过简单的几行Python代码，实现下载JM上的本子到本地，并且是处理好的图片。
 > 
+> **🧭 快速指路**
+> - [教程：使用 GitHub Actions 下载禁漫本子](./assets/docs/sources/tutorial/1_github_actions.md)
+> - [教程：导出并下载你的禁漫收藏夹数据](./assets/docs/sources/tutorial/10_export_favorites.md)
+> - [塔台广播：欢迎各位机长加入并贡献代码](./.github/CONTRIBUTING.md)
+> 
 > **友情提示：珍爱JM，为了减轻JM的服务器压力，请不要一次性爬取太多本子，西门🙏🙏🙏**.
-
-[【指路】教程：使用GitHub Actions下载禁漫本子](./assets/docs/sources/tutorial/1_github_actions.md)
-
-[【指路】教程：导出并下载你的禁漫收藏夹数据](./assets/docs/sources/tutorial/10_export_favorites.md)
+> 
 
 
 ![introduction.jpg](./assets/docs/sources/images/introduction.jpg)
@@ -51,12 +59,13 @@
 
 ## 安装教程
 
-> ⚠如果你没有安装过Python，需要先安装Python再执行下面的步骤，且版本需要>=3.7（[点我去python官网下载](https://www.python.org/downloads/)）
+> ⚠如果你没有安装过 Python，需要先前往 [Python 官网下载](https://www.python.org/downloads/) 再执行以下步骤。
+>**推荐使用 Python 3.12及以上版本**
 
 * 通过pip官方源安装（推荐，并且更新也是这个命令）
 
   ```shell
-  pip install jmcomic -i https://pypi.org/project -U
+  pip install jmcomic -U
   ```
 * 通过源代码安装
 
@@ -108,7 +117,7 @@ jmcomic.download_album(123, option)
 ### 3. 使用命令行
 > 如果只想下载本子，使用命令行会比上述方式更加简单直接
 > 
-> 例如，在windows上，直接按下win+r键，输入jmcomic xxx就可以下载本子。
+> 例如，在windows上，直接按下 win+R 键，输入`jmcomic xxx`就可以下载本子。
 
 示例：
 
@@ -138,11 +147,67 @@ b. 配置环境变量 `JM_OPTION_PATH` 为option文件路径（推荐）
 jmcomic 123
 ```
 
+### 4. 查看本子详情（jmv 命令）
+
+> `jmv` 命令用于快速查看本子详情，不做下载。
+> 
+> **适用场景**：在某些网站上看到一串*神秘车号*，想快速看看具体是啥本子。此时只需copy原文本，按下 win+R，输入`jmv [粘贴内容]`即可
+>
+> 支持从任意文本中提取数字作为车号，方便直接粘贴各种格式的车号。
+
+示例：
+
+```sh
+# 直接输入车号
+jmv 350234
+
+# 从混合文本中提取数字（提取出 350234）
+jmv 350谁还没看过234
+
+# 指定option文件（也支持环境变量，用法同上）
+jmv 350234 --option="D:/a.yml"
+
+# -y 参数：执行完毕后直接退出，无需按回车确认
+jmv 350234 -y
+```
+
+输出效果：
+
+```text
+🔍 正在查询 禁漫车号 - [350234] 的详情...
+
+──────────────────────────────────────────────────
+  📖 标题:  xxx
+  🆔 ID:    JM350234
+  🔗 链接:  https://18comic.vip/album/350234/
+  ✍️ 作者:  Author1, Author2
+──────────────────────────────────────────────────
+  📅 发布日期:  2022-06-15
+  📅 更新日期:  2023-01-01
+  📄 总页数:    50
+  👀 观看:      2M
+  ❤️ 点赞:     77K
+  💬 评论:      9801
+──────────────────────────────────────────────────
+  🏷️ 标签:  标签1, 标签2, ...
+  🎭 人物:  角色A, 角色B, ...
+  📚 作品:  作品1, 作品2, ...
+──────────────────────────────────────────────────
+  📑 章节 (2):
+     第1話  上  (id: 350234)
+     第2話  下  (id: 350235)
+──────────────────────────────────────────────────
+
+[运行结束] 请按回车键关闭窗口... (下次运行可附加 -y 参数跳过确认)
+```
+
 
 
 ## 进阶使用
 
-请查阅文档首页→[jmcomic.readthedocs.io](https://jmcomic.readthedocs.io/zh-cn/latest)
+请查阅文档首页 → [jmcomic.readthedocs.io](https://jmcomic.readthedocs.io/zh-cn/latest)
+
+或者查看github仓库的文档 → [github-repo-docs](https://github.com/hect0x7/JMComic-Crawler-Python/blob/master/assets/docs/sources/tutorial/0_common_usage.md)
 
 （提示：jmcomic提供了很多下载配置项，大部分的下载需求你都可以尝试寻找相关配置项或插件来实现。）
 
@@ -175,19 +240,28 @@ jmcomic 123
     - `硬件占用监控插件`
     - `只下载新章插件`
     - `压缩文件插件`
+    - `客户端代理插件`
     - `下载特定后缀图片插件`
     - `发送QQ邮件插件`
-    - `自动使用浏览器cookies插件`
+    - `日志主题过滤插件`
+    - `自动获取浏览器cookies插件`
     - `导出收藏夹为csv文件插件`
     - `合并所有图片为pdf文件插件`
     - `合并所有图片为长图png插件`
-    - `重复文件检测删除插件`
     - `网页观看本地章节插件`
+    - `订阅更新插件`
+    - `小章节跳过插件`
+    - `重复文件检测删除插件`
+    - `路径字符串替换插件`
+    - `高级重试插件`
+    - `封面下载插件`
 
 ## 使用小说明
 
-* Python >= 3.7，建议3.9以上，因为jmcomic的依赖库可能会不支持3.9以下的版本。
-* 个人项目，文档和示例会有不及时之处，可以Issue提问
+* 推荐使用 **Python 3.12+**，目前最低兼容版本为3.9。
+  > 注意：Python 3.9 及更早版本皆已于 2025 年彻底结束官方生命周期 (EOL)，使用3.9及以下随时有可能遇到第三方库不兼容的问题。
+
+* 个人项目，文档和示例会有不及时之处，可以Issue提问。
 
 ## 项目文件夹介绍
 

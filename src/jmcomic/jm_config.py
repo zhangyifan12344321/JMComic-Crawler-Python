@@ -1,4 +1,8 @@
+import logging
+
 from common import time_stamp, field_cache, ProxyBuilder
+
+jm_logger = logging.getLogger('jmcomic')
 
 
 def shuffled(lines):
@@ -9,9 +13,27 @@ def shuffled(lines):
     return ls
 
 
-def default_jm_logging(topic: str, msg: str):
-    from common import format_ts, current_thread
-    print('[{}] [{}]:【{}】{}'.format(format_ts(), current_thread().name, topic, msg))
+def setup_default_jm_logger():
+    # 为了保持原有默认向下兼容，如果没有 handler，我们加一个控制台 handler
+    if not jm_logger.handlers:
+        import sys
+        handler = logging.StreamHandler(sys.stdout)
+        formatter = logging.Formatter('[%(asctime)s] [%(threadName)s]:【%(topic)s】%(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+        handler.setFormatter(formatter)
+        jm_logger.addHandler(handler)
+        jm_logger.setLevel(logging.INFO)
+
+
+def default_jm_logging(topic: str, msg, e: Exception = None):
+    # 支持 jm_log('topic', e) 的简写
+    if isinstance(msg, BaseException):
+        e = msg
+        msg = str(msg)
+    extra = {'topic': topic}
+    if e is not None:
+        jm_logger.error(msg, extra=extra, exc_info=e)
+    else:
+        jm_logger.info(msg, extra=extra)
 
 
 # 禁漫常量
@@ -80,7 +102,7 @@ class JmMagicConstants:
     APP_TOKEN_SECRET_2 = '18comicAPPContent'
     APP_DATA_SECRET = '185Hcomic3PAPP7R'
     API_DOMAIN_SERVER_SECRET = 'diosfjckwpqpdfjkvnqQjsik'
-    APP_VERSION = '2.0.16'
+    APP_VERSION = '2.0.18'
 
 
 # 模块级别共用配置
@@ -88,7 +110,7 @@ class JmModuleConfig:
     # 网站相关
     PROT = "https://"
     JM_REDIRECT_URL = f'{PROT}jm365.work/3YeBdF'  # 永久網域，怕走失的小伙伴收藏起来
-    JM_PUB_URL = f'{PROT}jmcomic-fb.vip'
+    JM_PUB_URL = f'{PROT}jmcomicgo.org'
     JM_CDN_IMAGE_URL_TEMPLATE = PROT + 'cdn-msp.{domain}/media/photos/{photo_id}/{index:05}{suffix}'  # index 从1开始
     JM_IMAGE_SUFFIX = ['.jpg', '.webp', '.png', '.gif']
 
@@ -382,11 +404,29 @@ class JmModuleConfig:
         token, tokenparam = JmCryptoTool.token_and_tokenparam(ts)
         return ts, token, tokenparam
 
-    # noinspection PyUnusedLocal
     @classmethod
-    def jm_log(cls, topic: str, msg: str):
+    def jm_log(cls, topic: str, msg: str, e: Exception = None):
         if cls.FLAG_ENABLE_JM_LOG is True:
-            cls.EXECUTOR_LOG(topic, msg)
+            executor = cls.EXECUTOR_LOG
+            if e is None:
+                executor(topic, msg)
+            else:
+                import inspect
+                try:
+                    sig = inspect.signature(executor)
+                    params_count = len(sig.parameters)
+                except (ValueError, TypeError):
+                    params_count = 2
+
+                if params_count >= 3:
+                    executor(topic, msg, e)
+                else:
+                    import warnings
+                    warnings.warn(
+                        'jmcomic已升级到标准logging，建议将EXECUTOR_LOG重新定义为3个参数以接收异常对象 (topic, msg, e)',
+                        stacklevel=2
+                    )
+                    executor(topic, msg)
 
     @classmethod
     def disable_jm_log(cls):
@@ -506,6 +546,8 @@ class JmModuleConfig:
     def register_exception_listener(cls, etype, listener):
         cls.REGISTRY_EXCEPTION_LISTENER[etype] = listener
 
+
+setup_default_jm_logger()
 
 jm_log = JmModuleConfig.jm_log
 disable_jm_log = JmModuleConfig.disable_jm_log

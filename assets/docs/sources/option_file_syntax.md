@@ -42,6 +42,14 @@ client:
   # retry_times: 请求失败重试次数，默认为5
   retry_times: 5
 
+  # cache: 是否开启客户端级别的缓存，用于缓存已经请求过的元数据（如本子详情、搜索结果等），减少重复网络请求。
+  # 支持以下几种配置值（详见 CacheRegistry 类）：
+  #   - null 或 false (默认值): 关闭缓存，每次请求都重新发起。
+  #   - true 或 level_option: 开启 option 级别缓存，同一个 option 派生的所有 client 共享同一份缓存。
+  #   - level_client: 开启 client 级别缓存，每个 client 维持各自独立的缓存字典，互不干扰。
+  cache: null
+
+
   # postman: 请求配置
   postman:
     meta_data:
@@ -137,6 +145,7 @@ dir_rule:
 plugins:
   after_init:
     - plugin: usage_log # 实时打印硬件占用率的插件
+      # log: false # 选填。所有的插件都可以配置 `log: false` 以关闭该插件执行时产生的日志输出，默认是 true
       kwargs:
         interval: 0.5 # 间隔时间
         enable_warning: true # 占用过大时发出预警

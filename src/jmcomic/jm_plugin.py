@@ -548,19 +548,28 @@ class SendQQEmailPlugin(JmOptionPlugin):
 class LogTopicFilterPlugin(JmOptionPlugin):
     plugin_key = 'log_topic_filter'
 
+    import logging
+
+    class TopicFilter(logging.Filter):
+        def __init__(self, whitelist):
+            super().__init__()
+            self.whitelist = whitelist
+
+        def filter(self, record):
+            topic = getattr(record, 'topic', None)
+            if self.whitelist is not None and topic is not None and topic not in self.whitelist:
+                return False
+            return True
+
     def invoke(self, whitelist) -> None:
         if whitelist is not None:
             whitelist = set(whitelist)
 
-        old_jm_log = JmModuleConfig.EXECUTOR_LOG
+        from jmcomic import jm_logger
 
-        def new_jm_log(topic, msg):
-            if whitelist is not None and topic not in whitelist:
-                return
-
-            old_jm_log(topic, msg)
-
-        JmModuleConfig.EXECUTOR_LOG = new_jm_log
+        # 删除旧的同类 filter 避免重复
+        jm_logger.filters = [f for f in jm_logger.filters if not isinstance(f, LogTopicFilterPlugin.TopicFilter)]
+        jm_logger.addFilter(LogTopicFilterPlugin.TopicFilter(whitelist))
 
 
 class AutoSetBrowserCookiesPlugin(JmOptionPlugin):
@@ -1286,9 +1295,7 @@ class AdvancedRetryPlugin(JmOptionPlugin):
                 try:
                     return do_request(domain)
                 except Exception as e:
-                    from common import traceback_print_exec
-                    traceback_print_exec()
-                    jm_log('req.error', str(e))
+                    jm_log('req.error', e)
                     self.update_failed_count(client, domain)
 
         return client.fallback(request, url, 0, 0, is_image, **kwargs)

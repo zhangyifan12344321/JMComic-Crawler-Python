@@ -699,7 +699,17 @@ class JmApiClient(AbstractJmClient):
 
     def fetch_detail_entity(self, jmid, clazz):
         """
-        请求实体类
+        Fetches a JM entity (album or chapter) by its JM ID and returns it as an instance of `clazz`.
+        
+        Parameters:
+            jmid (str | int): JM ID or value parseable to a JM ID.
+            clazz (type): Entity class to parse the response into (e.g., `JmAlbumDetail` or a chapter/detail class).
+        
+        Returns:
+            object: An instance of `clazz` populated from the API response data.
+        
+        Raises:
+            Exception: Raised via ExceptionTool.raise_missing if the API response lacks required data.
         """
         jmid = JmcomicText.parse_to_jm_id(jmid)
         url = self.API_ALBUM if issubclass(clazz, JmAlbumDetail) else self.API_CHAPTER
@@ -710,7 +720,7 @@ class JmApiClient(AbstractJmClient):
             })
         )
 
-        if resp.res_data.get('name') is None:
+        if not resp.encoded_data or resp.res_data.get('name') is None:
             ExceptionTool.raise_missing(resp, jmid)
 
         return JmApiAdaptTool.parse_entity(resp.res_data, clazz)
