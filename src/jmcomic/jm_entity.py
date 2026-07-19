@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from functools import lru_cache
 
 from common import *
@@ -11,6 +12,7 @@ class Downloadable:
         self.save_path: str = ''
         self.exists: bool = False
         self.skip = False
+        self.cache = True
 
 
 class JmBaseEntity:
@@ -36,7 +38,7 @@ class JmBaseEntity:
         return False
 
 
-class IndexedEntity:
+class IndexedEntity(Sequence):
     def getindex(self, index: int):
         raise NotImplementedError
 
@@ -45,12 +47,14 @@ class IndexedEntity:
 
     def __getitem__(self, item) -> Any:
         if isinstance(item, slice):
-            start = item.start or 0
-            stop = item.stop or len(self)
-            step = item.step or 1
+            start, stop, step = item.indices(len(self))
             return [self.getindex(index) for index in range(start, stop, step)]
 
         elif isinstance(item, int):
+            if item < 0:
+                item += len(self)
+            if item < 0 or item >= len(self):
+                raise IndexError(f"index {item} out of range")
             return self.getindex(item)
 
         else:
@@ -125,16 +129,22 @@ class DetailEntity(JmBaseEntity, IndexedEntity):
         return f'[{self.id}] {self.oname}'
 
     def __str__(self):
-        return f'''{self.__class__.__name__}({self.__alias__()}-{self.id}: "{self.title}")'''
+        return f'''{self.__class__.__name__}({self.alias_en()}-{self.id}: "{self.title}")'''
 
     __repr__ = __str__
 
     @classmethod
-    def __alias__(cls):
+    def alias_en(cls):
         # "JmAlbumDetail" -> "album" (本子)
         # "JmPhotoDetail" -> "photo" (章节)
         cls_name = cls.__name__
         return cls_name[cls_name.index("m") + 1: cls_name.rfind("Detail")].lower()
+
+    @classmethod
+    def alias_cn(cls) -> str:
+        # "JmAlbumDetail" -> "album" (本子)
+        # "JmPhotoDetail" -> "photo" (章节)
+        return "本子" if issubclass(cls, JmAlbumDetail) else "章节"
 
     @classmethod
     def get_dirname(cls, detail: 'DetailEntity', ref: str) -> str:
@@ -214,7 +224,7 @@ class JmImageDetail(JmBaseEntity, Downloadable):
         self.img_file_name: str = img_file_name  # without suffix
         self.img_file_suffix: str = img_file_suffix
 
-        self.from_photo: Optional[JmPhotoDetail] = from_photo
+        self.from_photo: 'JmPhotoDetail' = from_photo  # type: ignore
         self.query_params: Optional[str] = query_params
         self.index = index  # 从1开始
 
@@ -313,7 +323,7 @@ class JmPhotoDetail(DetailEntity, Downloadable):
         self._series_id: int = int(series_id)
 
         self._author: Optional[str] = author
-        self.from_album: Optional[JmAlbumDetail] = from_album
+        self.from_album: JmAlbumDetail = from_album  # type: ignore
         self.index = self.album_index
 
         # 下面的属性和图片url有关
@@ -661,9 +671,9 @@ class JmSearchPage(JmPageContent):
     def wrap_single_album(cls, album: JmAlbumDetail) -> 'JmSearchPage':
         page = JmSearchPage([(
             album.album_id, {
-                'name': album.name,
-                'tags': album.tags,
-            }
+            'name': album.name,
+            'tags': album.tags,
+        }
         )], 1)
         setattr(page, 'album', album)
         return page
@@ -695,3 +705,6 @@ class JmFavoritePage(JmPageContent):
         for folder_info in self.folder_list:
             fid, fname = folder_info['FID'], folder_info['name']
             yield fid, fname
+
+
+DetailType = TypeVar('DetailType', bound='DetailEntity')

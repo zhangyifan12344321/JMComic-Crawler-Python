@@ -15,7 +15,7 @@ JmOption.default().to_file('./option.yml') # 创建默认option，导出为optio
 
 ```yaml
 # 开启jmcomic的日志输出，默认为true
-# 对日志有需求的可进一步参考文档 → https://jmcomic.readthedocs.io/en/latest/tutorial/11_log_custom/
+# 对日志有需求的可进一步参考文档 → https://jmcomic.readthedocs.io/zh-cn/latest/tutorial/11_log_custom/
 log: true
 
 # 配置客户端相关
@@ -26,6 +26,10 @@ client:
   #  api - 表示APP端
   # APP端不限ip兼容性好，网页端限制ip地区但效率高
   impl: html
+  
+  # async_impl: 指定异步客户端的底层实现类 (目前仅有: async_api)
+  # 注意: 配置此项不会自动开启异步下载，你必须在代码中调用 _async 相关方法
+  async_impl: async_api
 
   # domain: 禁漫域名配置，一般无需配置，jmcomic会根据上面的impl自动设置相应域名
   # 该配置项需要和上面的impl结合使用，因为禁漫网页端和APP端使用的是不同域名，
@@ -223,29 +227,28 @@ plugins:
           rule: '{Atitle}/{Aid}_cover.jpg'
     
 
-  after_album:
+  after_album: # 钩子（插件被调用时机）
     - plugin: zip # 压缩文件插件
       kwargs:
-        level: photo # 按照章节，一个章节一个压缩文件
-        # level 也可以配成 album，表示一个本子对应一个压缩文件，该压缩文件会包含这个本子的所有章节
-
-        filename_rule: Ptitle # 压缩文件的命名规则
-        # 请注意⚠ [https://github.com/hect0x7/JMComic-Crawler-Python/issues/223#issuecomment-2045227527]
-        # filename_rule和level有对应关系
-        # 如果level=[photo], filename_rule只能写Pxxx
-        # 如果level=[album], filename_rule只能写Axxx
+        # 压缩文件插件，配在不同钩子下面，效果不一样。可以选择配在 after_album 或者 after_photo 下
+        #   配置在 after_album 下 → 整个本子合并为一个压缩文件
+        #   配置在 after_photo 下 → 每个章节各一个压缩文件
+        # （旧的 level 配置已废弃，如果你配置过level，比如level=photo, 请直接改用after_photo）
 
         zip_dir: D:/jmcomic/zip/ # 压缩文件存放的文件夹
-
         suffix: zip #压缩包后缀名，默认值为zip，可以指定为zip或者7z
+        filename_rule: Atitle # 压缩文件的命名规则
+        # 请注意⚠ [https://github.com/hect0x7/JMComic-Crawler-Python/issues/223#issuecomment-2045227527]
+        # filename_rule和所在钩子有对应关系
+        # 如果配置在 after_photo 下, filename_rule 可以写 Pxxx 和Axxx
+        # 如果配置在 after_album 下, filename_rule 只能写 Axxx，不能写 Pxxx
 
-        # v2.6.0 以后，zip插件也支持dir_rule配置项，可以替代旧版本的zip_dir和filename_rule
+        # zip插件也支持dir_rule配置项，可以替代旧版本的zip_dir和filename_rule
         # 请注意⚠ 使用此配置项会使filename_rule，zip_dir，suffix三个配置项无效，与这三个配置项同时存在时仅会使用dir_rule
         # 示例如下:
         # dir_rule: # 新配置项，可取代旧的zip_dir和filename_rule
-        #   base_dir: D:/jmcomic-zip
-        #   rule: 'Bd / {Atitle} / [{Pid}]-{Ptitle}.zip'  # 设置压缩文件夹规则，中间Atitle表示创建一层文件夹，名称是本子标题。[{Pid}]-{Ptitle}.zip 表示压缩文件的命名规则(需显式写出后缀名)
-        # 使用此方法指定压缩包存储路径则无需和level对应
+        #   base_dir: D:/jmcomic-download/
+        #   rule: 'Bd / zip / JM{Aid}-{Atitle}.zip'  # 设置压缩文件夹规则，Bd指代base_dir，中间zip表示在{base_dir}下创建一个名为zip的文件夹，JM{Aid}-{Atitle}.zip 表示压缩文件的命名规则(需显式写出后缀名)
 
         delete_original_file: true # 压缩成功后，删除所有原文件和文件夹
         

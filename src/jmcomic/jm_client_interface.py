@@ -140,6 +140,7 @@ class JmApiResp(JmJsonResp):
         self.require_have_data()
         return AdvancedDict(self.res_data)
 
+
 # album-comment
 class JmAlbumCommentResp(JmJsonResp):
 
@@ -271,7 +272,7 @@ class JmImageClient:
 
     # noinspection PyMethodMayBeStatic
     def save_image_resp(self, decode_image, img_save_path, img_url, resp, scramble_id):
-        resp.transfer_to(img_save_path, scramble_id, decode_image, img_url)
+        return resp.transfer_to(img_save_path, scramble_id, decode_image, img_url)
 
     def download_by_image_detail(self,
                                  image: JmImageDetail,
@@ -513,6 +514,7 @@ class JmcomicClient(
         return JmModuleConfig.get_html_domain_all(self.get_root_postman())
 
     def get_html_domain_all_via_github(self):
+        """已废弃，请使用 get_html_domain_all。"""
         return JmModuleConfig.get_html_domain_all_via_github(self.get_root_postman())
 
     # noinspection PyMethodMayBeStatic
@@ -629,3 +631,314 @@ class JmcomicClient(
         if self.client_key == ctype.client_key:
             return True
         return False
+
+
+"""
+
+Async Client Interface — 对标 sync JmcomicClient 的异步版本
+
+"""
+
+
+class AsyncJmcomicClient:
+    """
+    异步客户端接口基类，对标 sync 的 JmcomicClient。
+
+    - 所有方法签名和 sync 版完全对齐
+    - 通过 REGISTRY_ASYNC_CLIENT 注册（配置项: client.async_impl）
+    - 由 JmOption.new_async_client() 工厂方法创建
+    """
+
+    client_key = None
+
+    # -- JmDetailClient --
+
+    async def get_album_detail(self, album_id) -> JmAlbumDetail:
+        raise NotImplementedError
+
+    async def get_photo_detail(self,
+                               photo_id,
+                               fetch_album=True,
+                               fetch_scramble_id=True,
+                               ) -> JmPhotoDetail:
+        raise NotImplementedError
+
+    async def check_photo(self, photo: JmPhotoDetail):
+        """
+        检查 photo 的 from_album / page_arr / data_original_domain 是否齐全，
+        缺失则请求补全。对齐 sync JmDetailClient.check_photo。
+        """
+        # 检查 from_album
+        if photo.from_album is None:
+            photo.from_album = await self.get_album_detail(photo.album_id)
+
+        # 检查 page_arr 和 data_original_domain
+        if photo.page_arr is None or photo.data_original_domain is None:
+            new = await self.get_photo_detail(photo.photo_id, False)
+            new.from_album = photo.from_album
+            photo.__dict__.update(new.__dict__)
+
+    # -- JmSearchAlbumClient --
+
+    async def search(self,
+                     search_query: str,
+                     page: int,
+                     main_tag: int,
+                     order_by: str,
+                     time: str,
+                     category: str,
+                     sub_category: Optional[str],
+                     ) -> JmSearchPage:
+        raise NotImplementedError
+
+    async def search_site(self,
+                          search_query: str,
+                          page: int = 1,
+                          order_by: str = JmMagicConstants.ORDER_BY_LATEST,
+                          time: str = JmMagicConstants.TIME_ALL,
+                          category: str = JmMagicConstants.CATEGORY_ALL,
+                          sub_category: Optional[str] = None,
+                          ):
+        return await self.search(search_query, page, 0, order_by, time, category, sub_category)
+
+    async def search_work(self,
+                          search_query: str,
+                          page: int = 1,
+                          order_by: str = JmMagicConstants.ORDER_BY_LATEST,
+                          time: str = JmMagicConstants.TIME_ALL,
+                          category: str = JmMagicConstants.CATEGORY_ALL,
+                          sub_category: Optional[str] = None,
+                          ):
+        return await self.search(search_query, page, 1, order_by, time, category, sub_category)
+
+    async def search_author(self,
+                            search_query: str,
+                            page: int = 1,
+                            order_by: str = JmMagicConstants.ORDER_BY_LATEST,
+                            time: str = JmMagicConstants.TIME_ALL,
+                            category: str = JmMagicConstants.CATEGORY_ALL,
+                            sub_category: Optional[str] = None,
+                            ):
+        return await self.search(search_query, page, 2, order_by, time, category, sub_category)
+
+    async def search_tag(self,
+                         search_query: str,
+                         page: int = 1,
+                         order_by: str = JmMagicConstants.ORDER_BY_LATEST,
+                         time: str = JmMagicConstants.TIME_ALL,
+                         category: str = JmMagicConstants.CATEGORY_ALL,
+                         sub_category: Optional[str] = None,
+                         ):
+        return await self.search(search_query, page, 3, order_by, time, category, sub_category)
+
+    async def search_actor(self,
+                           search_query: str,
+                           page: int = 1,
+                           order_by: str = JmMagicConstants.ORDER_BY_LATEST,
+                           time: str = JmMagicConstants.TIME_ALL,
+                           category: str = JmMagicConstants.CATEGORY_ALL,
+                           sub_category: Optional[str] = None,
+                           ):
+        return await self.search(search_query, page, 4, order_by, time, category, sub_category)
+
+    async def do_page_iter(self, params: dict, page: int, get_page_method):
+        from math import inf
+        from typing import Optional, Dict
+
+        def update(value: Optional[Dict], page: int, page_content):
+            if value is None:
+                return page + 1, page_content.page_count
+
+            ExceptionTool.require_true(isinstance(value, dict), 'require dict params')
+
+            # 根据外界传递的参数，更新params和page
+            page = value.get('page', page)
+            params.update(value)
+
+            return page, inf
+
+        total = inf
+        while page <= total:
+            params['page'] = page
+            page_content = await get_page_method(**params)
+            value = yield page_content
+            page, total = update(value, page, page_content)
+
+    async def search_gen(self,
+                         search_query: str,
+                         main_tag=0,
+                         page: int = 1,
+                         order_by: str = JmMagicConstants.ORDER_BY_LATEST,
+                         time: str = JmMagicConstants.TIME_ALL,
+                         category: str = JmMagicConstants.CATEGORY_ALL,
+                         sub_category: Optional[str] = None,
+                         ):
+        """
+        异步搜索结果的生成器。
+        使用示例:
+        ```
+        async for page in client.search_gen('无修正'):
+            pass
+        ```
+        同时支持外界 asend 参数改变搜索的设定:
+        ```
+        gen = client.search_gen('MANA')
+        page_1 = await gen.asend(None)
+        page_3 = await gen.asend({'page': 3})
+        ```
+        """
+        params = {
+            'search_query': search_query,
+            'main_tag': main_tag,
+            'order_by': order_by,
+            'time': time,
+            'category': category,
+            'sub_category': sub_category,
+        }
+
+        aiter = self.do_page_iter(params, page, self.search)
+        value = None
+        while True:
+            try:
+                page_content = await aiter.asend(value)
+                value = yield page_content
+            except StopAsyncIteration:
+                break
+
+    # -- JmCategoryClient --
+
+    async def categories_filter(self,
+                                page: int,
+                                time: str,
+                                category: str,
+                                order_by: str,
+                                sub_category: Optional[str] = None,
+                                ) -> JmCategoryPage:
+        raise NotImplementedError
+
+    async def categories_filter_gen(self,
+                                    page: int = 1,
+                                    time: str = JmMagicConstants.TIME_ALL,
+                                    category: str = JmMagicConstants.CATEGORY_ALL,
+                                    order_by: str = JmMagicConstants.ORDER_BY_LATEST,
+                                    sub_category: Optional[str] = None,
+                                    ):
+        """异步分类结果生成器，支持通过 asend 动态更新分页参数。"""
+        params = {
+            'time': time,
+            'category': category,
+            'order_by': order_by,
+            'sub_category': sub_category,
+        }
+
+        aiter = self.do_page_iter(params, page, self.categories_filter)
+        value = None
+        while True:
+            try:
+                page_content = await aiter.asend(value)
+                value = yield page_content
+            except StopAsyncIteration:
+                break
+
+    async def month_ranking(self,
+                            page: int = 1,
+                            category: str = JmMagicConstants.CATEGORY_ALL,
+                            ):
+        return await self.categories_filter(page, JmMagicConstants.TIME_MONTH, category,
+                                            JmMagicConstants.ORDER_BY_VIEW)
+
+    async def week_ranking(self,
+                           page: int = 1,
+                           category: str = JmMagicConstants.CATEGORY_ALL,
+                           ):
+        return await self.categories_filter(page, JmMagicConstants.TIME_WEEK, category,
+                                            JmMagicConstants.ORDER_BY_VIEW)
+
+    async def day_ranking(self,
+                          page: int = 1,
+                          category: str = JmMagicConstants.CATEGORY_ALL,
+                          ):
+        return await self.categories_filter(page, JmMagicConstants.TIME_TODAY, category,
+                                            JmMagicConstants.ORDER_BY_VIEW)
+
+    # -- JmUserClient --
+
+    async def login(self, username: str, password: str):
+        raise NotImplementedError
+
+    async def favorite_folder(self,
+                              page=1,
+                              order_by=JmMagicConstants.ORDER_BY_LATEST,
+                              folder_id='0',
+                              username='',
+                              ) -> JmFavoritePage:
+        raise NotImplementedError
+
+    async def favorite_folder_gen(self,
+                                  page=1,
+                                  order_by=JmMagicConstants.ORDER_BY_LATEST,
+                                  folder_id='0',
+                                  username='',
+                                  ):
+        """
+        见 search_gen
+        """
+        params = {
+            'order_by': order_by,
+            'folder_id': folder_id,
+            'username': username,
+        }
+
+        aiter = self.do_page_iter(params, page, self.favorite_folder)
+        value = None
+        while True:
+            try:
+                page_content = await aiter.asend(value)
+                value = yield page_content
+            except StopAsyncIteration:
+                break
+
+    async def add_favorite_album(self, album_id, folder_id='0'):
+        raise NotImplementedError
+
+    async def album_comment(self,
+                            video_id,
+                            comment,
+                            originator='',
+                            status='true',
+                            comment_id=None,
+                            **kwargs,
+                            ) -> JmAlbumCommentResp:
+        raise NotImplementedError
+
+    # -- 域名 / 缓存管理 --
+
+    def get_domain_list(self) -> List[str]:
+        raise NotImplementedError
+
+    def set_domain_list(self, domain_list: List[str]):
+        raise NotImplementedError
+
+    def set_cache_dict(self, cache_dict: Optional[Dict]):
+        raise NotImplementedError
+
+    def get_cache_dict(self) -> Optional[Dict]:
+        raise NotImplementedError
+
+    # -- 生命周期 --
+
+    async def close(self):
+        raise NotImplementedError
+
+    async def __aenter__(self):
+        await self.setup()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.close()
+
+    async def setup(self):
+        pass
+
+    async def get_jm_image(self, download_url):
+        raise NotImplementedError

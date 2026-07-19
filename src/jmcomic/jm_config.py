@@ -1,5 +1,6 @@
-import logging
+from __future__ import annotations
 
+import logging
 from common import time_stamp, field_cache, ProxyBuilder
 
 jm_logger = logging.getLogger('jmcomic')
@@ -24,7 +25,7 @@ def setup_default_jm_logger():
         jm_logger.setLevel(logging.INFO)
 
 
-def default_jm_logging(topic: str, msg, e: Exception = None):
+def default_jm_logging(topic: str, msg, e: BaseException | None = None):
     # 支持 jm_log('topic', e) 的简写
     if isinstance(msg, BaseException):
         e = msg
@@ -98,11 +99,11 @@ class JmMagicConstants:
     SCRAMBLE_421926 = 421926  # 2023-02-08后改了图片切割算法
 
     # 移动端API密钥
-    APP_TOKEN_SECRET = '18comicAPP'
+    APP_TOKEN_SECRET = '185Hcomic3PAPP7R'
     APP_TOKEN_SECRET_2 = '18comicAPPContent'
     APP_DATA_SECRET = '185Hcomic3PAPP7R'
     API_DOMAIN_SERVER_SECRET = 'diosfjckwpqpdfjkvnqQjsik'
-    APP_VERSION = '2.0.18'
+    APP_VERSION = '2.0.28'
 
 
 # 模块级别共用配置
@@ -153,10 +154,10 @@ class JmModuleConfig:
 
     # 移动端API域名
     DOMAIN_API_LIST = shuffled('''
-    www.cdnaspa.vip
-    www.cdnaspa.club
-    www.cdnplaystation6.vip
-    www.cdnplaystation6.cc
+    www.cdnhjk.net
+    www.cdngwc.cc
+    www.cdngwc.net
+    www.cdngwc.club
     ''')
 
     DOMAIN_API_UPDATED_LIST = None
@@ -165,6 +166,7 @@ class JmModuleConfig:
     API_URL_DOMAIN_SERVER_LIST = shuffled('''
     https://rup4a04-c01.tos-ap-southeast-1.bytepluses.com/newsvr-2025.txt
     https://rup4a04-c02.tos-cn-hongkong.bytepluses.com/newsvr-2025.txt
+    https://rup4a04-c03.tos-cn-beijing.bytepluses.com.cn/newsvr-2025.txt
     ''')
 
     APP_HEADERS_TEMPLATE = {
@@ -219,6 +221,8 @@ class JmModuleConfig:
 
     # 客户端注册表
     REGISTRY_CLIENT = {}
+    # 异步客户端注册表（对应 REGISTRY_CLIENT，由 AsyncJmcomicClient 子类注册）
+    REGISTRY_ASYNC_CLIENT = {}
     # 插件注册表
     REGISTRY_PLUGIN = {}
     # 异常监听器
@@ -242,6 +246,9 @@ class JmModuleConfig:
     FLAG_DECODE_URL_WHEN_LOGGING = True
     # 当内置的版本号落后时，使用最新的禁漫app版本号
     FLAG_USE_VERSION_NEWER_IF_BEHIND = True
+    # 当正则匹配异常时，将响应文本持久化到文件，方便debug定位解析失败原因
+    # 文件会保存在当前工作目录下的 jmcomic_debug/ 中，路径会打印在异常信息中
+    FLAG_DUMP_HTML_ON_REGEX_ERROR = False
 
     # 关联dir_rule的自定义字段与对应的处理函数
     # 例如:
@@ -305,6 +312,18 @@ class JmModuleConfig:
         return clazz
 
     @classmethod
+    def async_client_impl_class(cls, client_key: str):
+        """异步客户端类查找，对应 client_impl_class"""
+        clazz_dict = cls.REGISTRY_ASYNC_CLIENT
+
+        clazz = clazz_dict.get(client_key, None)
+        if clazz is None:
+            from .jm_toolkit import ExceptionTool
+            ExceptionTool.raises(f'not found async client impl class for key: "{client_key}"')
+
+        return clazz
+
+    @classmethod
     @field_cache("DOMAIN_HTML")
     def get_html_domain(cls, postman=None):
         """
@@ -351,37 +370,21 @@ class JmModuleConfig:
     @classmethod
     def get_html_domain_all_via_github(cls,
                                        postman=None,
-                                       template='https://jmcmomic.github.io/go/{}.html',
-                                       index_range=(300, 309)
+                                       *deprecated_args,
+                                       **deprecated_kwargs,
                                        ):
         """
-        通过禁漫官方的github号的repo获取最新的禁漫域名
-        https://github.com/jmcmomic/jmcmomic.github.io
+        已废弃：原 GitHub 仓库不再提供禁漫域名。
+        为保持兼容，当前转发到 get_html_domain_all；该方法将在未来版本移除。
         """
-        postman = postman or cls.new_postman(headers={
-            'authority': 'github.com',
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 '
-                          'Safari/537.36'
-        })
-        domain_set = set()
-
-        def fetch_domain(url):
-            resp = postman.get(url, allow_redirects=False)
-            text = resp.text
-            from .jm_toolkit import JmcomicText
-            for domain in JmcomicText.analyse_jm_pub_html(text):
-                if domain.startswith('jm365'):
-                    continue
-                domain_set.add(domain)
-
-        from common import multi_thread_launcher
-
-        multi_thread_launcher(
-            iter_objs=[template.format(i) for i in range(*index_range)],
-            apply_each_obj_func=fetch_domain,
+        import warnings
+        warnings.warn(
+            'get_html_domain_all_via_github is deprecated because the GitHub repository no longer provides '
+            'JMComic domains; use get_html_domain_all instead.',
+            DeprecationWarning,
+            stacklevel=2,
         )
-
-        return domain_set
+        return cls.get_html_domain_all(postman)
 
     @classmethod
     def new_html_headers(cls, domain='18comic.vip'):
@@ -405,8 +408,8 @@ class JmModuleConfig:
         return ts, token, tokenparam
 
     @classmethod
-    def jm_log(cls, topic: str, msg: str, e: Exception = None):
-        if cls.FLAG_ENABLE_JM_LOG is True:
+    def jm_log(cls, topic: str, msg, e: BaseException | None = None):
+        if cls.FLAG_ENABLE_JM_LOG:
             executor = cls.EXECUTOR_LOG
             if e is None:
                 executor(topic, msg)
@@ -440,7 +443,7 @@ class JmModuleConfig:
 
         from common import Postmans
 
-        if session is True:
+        if session:
             return Postmans.new_session(**kwargs)
 
         return Postmans.new_postman(**kwargs)
@@ -476,6 +479,7 @@ class JmModuleConfig:
                 }
             },
             'impl': None,
+            'async_impl': 'async_api',  # 异步客户端实现类型
             'retry_times': 5,
         },
         'plugins': {
@@ -543,6 +547,14 @@ class JmModuleConfig:
         cls.REGISTRY_CLIENT[client_class.client_key] = client_class
 
     @classmethod
+    def register_async_client(cls, client_class):
+        """注册异步客户端类，对标 register_client"""
+        from .jm_toolkit import ExceptionTool
+        ExceptionTool.require_true(getattr(client_class, 'client_key', None) is not None,
+                                   f'未配置client_key, class: {client_class}')
+        cls.REGISTRY_ASYNC_CLIENT[client_class.client_key] = client_class
+
+    @classmethod
     def register_exception_listener(cls, etype, listener):
         cls.REGISTRY_EXCEPTION_LISTENER[etype] = listener
 
@@ -551,3 +563,59 @@ setup_default_jm_logger()
 
 jm_log = JmModuleConfig.jm_log
 disable_jm_log = JmModuleConfig.disable_jm_log
+
+
+class PrettyFormatter(logging.Formatter):
+    """带 ANSI 颜色的日志格式化器，按 topic 前缀分配颜色"""
+
+    TOPIC_COLORS = {
+        'album': '\033[1;36m',  # 青色加粗 — 本子级别
+        'photo': '\033[36m',  # 青色 — 章节级别
+        'image': '\033[2;37m',  # 暗灰 — 图片级别（弱化）
+        'plugin': '\033[35m',  # 紫色 — 插件
+        'req': '\033[33m',  # 黄色 — 网络请求
+        'api': '\033[34m',  # 蓝色 — API
+    }
+    ERROR_COLOR = '\033[1;31m'  # 红色加粗
+    WARN_COLOR = '\033[33m'  # 黄色
+    RESET = '\033[0m'
+
+    def __init__(self):
+        super().__init__(fmt='[%(asctime)s] %(message)s', datefmt='%H:%M:%S')
+
+    def format(self, record):
+        topic = getattr(record, 'topic', '')
+        if record.levelno >= logging.ERROR:
+            color = self.ERROR_COLOR
+        elif record.levelno >= logging.WARNING:
+            color = self.WARN_COLOR
+        else:
+            # 按 topic 前缀匹配颜色
+            color = next(
+                (c for prefix, c in self.TOPIC_COLORS.items()
+                 if topic.startswith(prefix)),
+                ''
+            )
+        formatted = super().format(record)
+        return f'{color}{formatted}{self.RESET}' if color else formatted
+
+
+# noinspection PyUnresolvedReferences
+def enable_pretty_log():
+    """开启带颜色的美化日志"""
+    import sys
+
+    # Windows 需要启用 VT100 ANSI 支持
+    if sys.platform == 'win32':
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.GetStdHandle(-11)  # STD_OUTPUT_HANDLE
+        mode = ctypes.c_uint32()
+        if kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+            kernel32.SetConsoleMode(handle, mode.value | 0x0004)  # ENABLE_VIRTUAL_TERMINAL_PROCESSING
+
+    jm_logger.handlers.clear()
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(PrettyFormatter())
+    jm_logger.addHandler(handler)
+    jm_logger.setLevel(logging.INFO)

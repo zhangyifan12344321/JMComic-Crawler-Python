@@ -26,7 +26,7 @@ class JmcomicText:
     pattern_html_album_album_id = compile(r'<span class="number">.*?：JM(\d+)</span>')
     pattern_html_album_scramble_id = compile(r'var scramble_id = (\d+);')
     pattern_html_album_name = compile(r'id="book-name"[^>]*?>([\s\S]*?)<')
-    pattern_html_album_description = compile(r'叙述：([\s\S]*?)</h2>')
+    pattern_html_album_description = compile(r'[叙|敘]述：([\s\S]*?)</h2>')
     pattern_html_album_episode_list = compile(r'data-album="(\d+)"[^>]*>[\s\S]*?第(\d+)[话話]([\s\S]*?)<[\s\S]*?>')
     pattern_html_album_page_count = compile(r'<span class="pagecount">.*?:(\d+)</span>')
     pattern_html_album_pub_date = compile(r'>上架日期 : (.*?)</span>')
@@ -180,10 +180,11 @@ class JmcomicText:
 
             if field_value is None:
                 if default is None:
+                    msg_tail = '' if JmModuleConfig.FLAG_DUMP_HTML_ON_REGEX_ERROR else '，可通过设置 JmModuleConfig.FLAG_DUMP_HTML_ON_REGEX_ERROR = True 将响应文本保存到文件'
                     ExceptionTool.raises_regex(
                         f"文本没有匹配上字段：字段名为'{field_name}'，pattern: [{pattern}]"
                         + (f"\n响应文本=[{html}]" if len(html) < 200 else
-                           f'响应文本过长(len={len(html)})，不打印'
+                           f'响应文本过长(len={len(html)})，不打印{msg_tail}'
                            ),
                         html=html,
                         pattern=pattern,
@@ -350,7 +351,7 @@ class JmcomicText:
         try:
             import zhconv
             return zhconv.convert(s, target)
-        except ImportError as e:
+        except ImportError:
             jm_log('zhconv.error', '繁简转换失败，未安装zhconv，请先使用命令安装: [pip install zhconv]')
             return s
         except Exception as e:

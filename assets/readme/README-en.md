@@ -37,7 +37,7 @@
 > **Friendly Prompt: Cherish JM. In order to reduce the pressure on JM servers, please do not download too many albums at once 🙏🙏🙏.**
 
 
-![introduction.jpg](../docs/sources/images/introduction.jpg)
+![introduction.jpg](https://raw.githubusercontent.com/hect0x7/hect0x7/master/images/jmcomic-intro-main.png)
 
 
 ## Introduction
@@ -83,6 +83,10 @@ All you need is the following code to download all chapter images of the album `
 ```python
 import jmcomic  # Import this module, you need to install it first.
 jmcomic.download_album('123')  # Pass the ID of the album to download the entire album locally.
+
+# You can also use the Async API (See Tutorial: https://jmcomic.readthedocs.io/zh-cn/latest/tutorial/14_async_usage/)
+import asyncio
+asyncio.run(jmcomic.download_album_async('123'))
 ```
 
 The `download_album` method above also accepts an `option` parameter to control the configuration, which includes JM domain names, network proxies, image format conversions, plugins, and more.
@@ -151,6 +155,61 @@ jmcomic 123
 
 
 
+
+### 4. View Album Details (jmv command)
+
+> The `jmv` command is used to quickly view album details without downloading.
+> 
+> **Applicable scenarios**: When you see a *mysterious car number* on some websites and want to quickly see what album it is. Just copy the original text, press Win+R, and enter `jmv [pasted content]`.
+>
+> It supports extracting numbers as the car number from any text, making it easy to paste car numbers in various formats directly.
+
+Examples:
+
+```sh
+# Directly enter the car number
+jmv 350234
+
+# Extract numbers from mixed text (extracts 350234)
+jmv 350whohasntseen234
+
+# Specify option file (also supports environment variables, same usage as above)
+jmv 350234 --option="D:/a.yml"
+
+# -y parameter: exit directly after execution without pressing Enter to confirm
+jmv 350234 -y
+```
+
+Output effect:
+
+```text
+🔍 Querying details for JMComic car number - [350234]...
+
+──────────────────────────────────────────────────
+  📖 Title:  xxx
+  🆔 ID:     JM350234
+  🔗 Link:   https://18comic.vip/album/350234/
+  ✍️ Author: Author1, Author2
+──────────────────────────────────────────────────
+  📅 Published: 2022-06-15
+  📅 Updated:   2023-01-01
+  📄 Pages:     50
+  👀 Views:     2M
+  ❤️ Likes:     77K
+  💬 Comments:  9801
+──────────────────────────────────────────────────
+  🏷️ Tags:       Tag1, Tag2, ...
+  🎭 Characters: CharA, CharB, ...
+  📚 Works:      Work1, Work2, ...
+──────────────────────────────────────────────────
+  📑 Chapters (2):
+     Episode 1  Part 1  (id: 350234)
+     Episode 2  Part 2  (id: 350235)
+──────────────────────────────────────────────────
+
+[Execution Finished] Please press Enter to close the window... (You can append the -y parameter next time to skip confirmation)
+```
+
 ## Advanced Usage
 
 Please check the documentation homepage → [jmcomic.readthedocs.io (Chinese language)](https://jmcomic.readthedocs.io/zh-cn/latest)
@@ -159,6 +218,7 @@ Please check the documentation homepage → [jmcomic.readthedocs.io (Chinese lan
 
 ## Key Features
 
+- **Supports both Async and Sync APIs**
 - **Bypass Cloudflare anti-bot mechanisms**
 - **Implement the latest decryption logic for the JM APP API (1.6.3)**
 - Multiple usages:
@@ -179,26 +239,10 @@ Please check the documentation homepage → [jmcomic.readthedocs.io (Chinese lan
   - Supports custom callbacks before/after downloading albums/chapters/images
   - Customizable objects: `Downloader` `Option` `Client` `Entities`, etc.
   - Supports custom logging and exception listener mechanics
-  - **Embedded with powerful Plugins** to easily extend features or inject others':
-    - `Login Plugin`
-    - `Hardware usage monitor plugin`
-    - `Filter-new-chapter plugin`
-    - `Zip-files plugin`
-    - `Client proxy plugin`
-    - `Specific image suffix format downloader`
-    - `Send via QQ Mail plugin`
-    - `Log topic filter plugin`
-    - `Auto fetch browser cookies plugin`
-    - `Export favorites to CSV plugin`
-    - `Merge images into PDF plugin`
-    - `Merge images into Long png plugin`
-    - `Local chapter web-viewer plugin`
-    - `Subscribe album update plugin`
-    - `Skip small chapters plugin`
-    - `Duplicate detection and deletion plugin`
-    - `Path string replacement plugin`
-    - `Advanced retry plugin`
-    - `Download cover plugin`
+  - **Embedded with powerful core Plugins** to easily extend features or inject others':
+    - `Login Plugin`, `Filter-new-chapter plugin`, `Export favorites to CSV plugin`
+    - `Merge images into PDF plugin`, `Merge images into Long png plugin`
+    - `Zip-files plugin`, `Auto fetch browser cookies plugin`, `Subscribe album update plugin`, etc.
 
 ## Prerequisites
 

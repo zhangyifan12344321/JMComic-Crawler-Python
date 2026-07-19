@@ -30,13 +30,14 @@
 > **🧭 快速指路**
 > - [教程：使用 GitHub Actions 下载禁漫本子](./assets/docs/sources/tutorial/1_github_actions.md)
 > - [教程：导出并下载你的禁漫收藏夹数据](./assets/docs/sources/tutorial/10_export_favorites.md)
+> - [教程：下载后转为 PDF / ZIP / 长图](./assets/docs/sources/tutorial/13_export_and_feature.md)
 > - [塔台广播：欢迎各位机长加入并贡献代码](./.github/CONTRIBUTING.md)
 > 
 > **友情提示：珍爱JM，为了减轻JM的服务器压力，请不要一次性爬取太多本子，西门🙏🙏🙏**.
 > 
 
 
-![introduction.jpg](./assets/docs/sources/images/introduction.jpg)
+![introduction.jpg](https://raw.githubusercontent.com/hect0x7/hect0x7/master/images/jmcomic-intro-main.png)
 
 
 ## 项目介绍
@@ -82,6 +83,10 @@
 ```python
 import jmcomic  # 导入此模块，需要先安装.
 jmcomic.download_album('123')  # 传入要下载的album的id，即可下载整个album到本地.
+
+# 也可以使用 Async API (详见教程: https://jmcomic.readthedocs.io/zh-cn/latest/tutorial/14_async_usage/)
+import asyncio
+asyncio.run(jmcomic.download_album_async('123'))
 ```
 
 上面的 `download_album`方法还有一个参数`option`，可用于控制下载配置，配置包括禁漫域名、网络代理、图片格式转换、插件等等。
@@ -221,9 +226,9 @@ jmv 350234 -y
     Actions：网页上直接输入本子id就能下载（[教程：使用GitHub Actions下载禁漫本子](./assets/docs/sources/tutorial/1_github_actions.md)）
   - 命令行：无需写Python代码，简单易用（[教程：使用命令行下载禁漫本子](./assets/docs/sources/tutorial/2_command_line.md)）
   - Python代码：最本质、最强大的使用方式，需要你有一定的python编程基础
+- **支持 Async 和 Sync 两套 API**
 - 支持**网页端**和**移动端**两种客户端实现，可通过配置切换（**移动端不限ip兼容性好，网页端限制ip地区但效率高**）
 - 支持**自动重试和域名切换**机制
-- **多线程下载**（可细化到一图一线程，效率极高）
 - **可配置性强**
 
   - 不配置也能使用，十分方便
@@ -235,26 +240,10 @@ jmv 350234 -y
   - 支持自定义本子/章节/图片下载前后的回调函数
   - 支持自定义类：`Downloader（负责调度）` `Option（负责配置）` `Client（负责请求）` `实体类`等
   - 支持自定义日志、异常监听器
-  - **支持Plugin插件，可以方便地扩展功能，以及使用别人的插件，目前内置插件有**：
-    - `登录插件`
-    - `硬件占用监控插件`
-    - `只下载新章插件`
-    - `压缩文件插件`
-    - `客户端代理插件`
-    - `下载特定后缀图片插件`
-    - `发送QQ邮件插件`
-    - `日志主题过滤插件`
-    - `自动获取浏览器cookies插件`
-    - `导出收藏夹为csv文件插件`
-    - `合并所有图片为pdf文件插件`
-    - `合并所有图片为长图png插件`
-    - `网页观看本地章节插件`
-    - `订阅更新插件`
-    - `小章节跳过插件`
-    - `重复文件检测删除插件`
-    - `路径字符串替换插件`
-    - `高级重试插件`
-    - `封面下载插件`
+  - **支持Plugin插件，可以方便地扩展功能，以及使用别人的插件，目前核心内置插件有**：
+    - `登录插件`、`只下载新章插件`、`导出收藏夹为csv文件插件`
+    - `合并所有图片为pdf文件插件`、`合并所有图片为长图png插件`
+    - `压缩文件插件`、`自动获取浏览器cookies插件`、`订阅更新插件`等
 
 ## 使用小说明
 
